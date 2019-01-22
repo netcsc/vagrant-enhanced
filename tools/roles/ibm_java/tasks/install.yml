@@ -1,0 +1,31 @@
+- set_fact:
+      install_jvm: "{{ jvm_installed.stat.exists == False }}"
+
+- block:
+
+    - name: Download IBM JVM {{ ibm_jvm_major_version }}.{{ ibm_jvm_minor_version }}
+      get_url:
+          url: http://public.dhe.ibm.com/ibmdl/export/pub/systems/cloud/runtimes/java/{{ ibm_jvm_major_version }}.{{ ibm_jvm_minor_version }}/linux/x86_64/ibm-java-x86_64-sdk-{{ ibm_jvm_major_version }}-{{ ibm_jvm_minor_version }}.bin
+          dest: /tmp/ibm_jvm_{{ ibm_jvm_major_version }}.{{ ibm_jvm_minor_version }}.bin
+          mode: 0750
+
+    - name: Copy the response file into place
+      template:
+          src: installer.properties.j2
+          dest: /tmp/installer.properties
+
+    - name: Run the installer
+      become: true
+      command: >
+          /tmp/ibm_jvm_{{ ibm_jvm_major_version }}.{{ ibm_jvm_minor_version }}.bin
+          -i silent
+          -f /tmp/installer.properties
+
+    - name: Update alternatives so IBM Java is used
+      become: true
+      alternatives:
+          name: java
+          link: /usr/bin/java
+          path: "{{ ibm_jvm_install_dir }}/bin/java"
+          priority: 1
+  when: install_jvm

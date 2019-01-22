@@ -1,0 +1,14 @@
+---
+
+# Usage: ansible-playbook open-port.yml -e "port=8081 protocol=tcp"
+
+- hosts: localhost
+  tasks:
+      - name: Allow port through Firewall
+        become: true
+        firewalld:
+            permanent: true
+            immediate: true
+            port: "{{ port }}/{{ protocol }}"
+            state: enabled
+            zone: public 

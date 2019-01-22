@@ -1,0 +1,8 @@
+---
+
+- name: Check for an existing IBM JVM
+  stat:
+      path: /opt/ibm/java-x86_64
+  register: jvm_installed
+
+- include_tasks: "{{ 'teardown.yml' if teardown else 'install.yml' }}"

@@ -1,0 +1,7 @@
+---
+
+- hosts: localhost
+  vars:
+      teardown: true
+  roles:
+      - websphere_liberty

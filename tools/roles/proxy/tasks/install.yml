@@ -1,0 +1,168 @@
+---
+
+- name: Hash the clear password
+  # Special YAML multiline syntax.
+  # https://stackoverflow.com/a/21699210
+  # `>` causes all the lines to be concatenated,
+  # without spaces or a newline after each line.
+  shell: >
+      printf "{{ password_clear }}" |
+      cntlm -H -u {{ username }} -d {{ domain }} |
+      awk '/PassNTLMv2/ { print $2 }'
+  register: password_hash_output
+  when: password_clear != ""
+
+- name: Clear the password_clear variable
+  set_fact:
+      password_clear: ~
+
+- name: Extract the password hash
+  set_fact:
+      password_hash: "{{ password_hash_output.stdout_lines[0] }}"
+  when: password_hash_output.changed
+
+- name: Ensure proxy settings are in the user's .bashrc
+  lineinfile:
+      path: ~/.bashrc
+      line: "export {{ item.name }}=\"{{ item.value }}\""
+  with_items: "{{ required_environment_vars }}"
+
+- name: Ensure /mnt/cntlm exists
+  become: true
+  file:
+      state: directory
+      path: /mnt/cntlm
+
+- name: Unmount cntlm tmpfs
+  become: true
+  mount:
+      state: unmounted
+      path: /mnt/cntlm
+
+- name: Mount cntlm tmpfs
+  become: true
+  mount:
+      state: mounted
+      path: /mnt/cntlm
+      src: tmpfs
+      fstype: tmpfs
+      opts: size=1M
+
+- name: Get status of /etc/cntlm.conf
+  stat:
+      path: /etc/cntlm.conf
+  register: cntlm_conf
+
+- name: Copy real /etc/cntlm.conf to a backup file
+  become: true
+  copy:
+      src: /etc/cntlm.conf
+      dest: /etc/cntlm.orig.conf
+      remote_src: true
+  when: cntlm_conf.stat.islnk is defined and cntlm_conf.stat.islnk == False
+
+- name: Remove real /etc/cntlm.conf
+  become: true
+  file:
+      state: absent
+      path: /etc/cntlm.conf
+  when: cntlm_conf.stat.islnk is defined and cntlm_conf.stat.islnk == False
+
+- name: Copy real /etc/cntlm.orig.conf to memory-backed location.
+  become: true
+  copy:
+      src: /etc/cntlm.orig.conf
+      dest: /mnt/cntlm/cntlm.conf
+      remote_src: true
+      owner: root
+      group: root
+      mode: 0600
+
+- name: Add symlink from memory-backed cntlm.conf to /etc/cntlm.conf
+  become: true
+  file:
+      state: link
+      path: /etc/cntlm.conf
+      src: /mnt/cntlm/cntlm.conf
+
+# Remove things first.
+# This just makes sure our file is good and clean.
+- name: Remove existing CNTLM config lines
+  become: true
+  lineinfile:
+      path: /etc/cntlm.conf
+      state: absent
+      regexp: "{{ item }}"
+  with_items:
+      - "^[#\\s]*Username"
+      - "^[#\\s]*Domain"
+      - "^[#\\s]*Password"
+      - "^[#\\s]*PassLM"
+      - "^[#\\s]*PassNT"
+      - "^[#\\s]*PassNTLMv2"
+      - "^[#\\s]*NoProxy"
+      - "^[#\\s]*Gateway"
+      - "^[#\\s]*Proxy"
+
+- name: Add the new CNTLM config lines.
+  become: true
+  lineinfile:
+      path: /etc/cntlm.conf
+      line: "{{ item }}"
+      insertbefore: BOF
+  with_items:
+      - "Username {{ username }}"
+      - "Domain {{ domain }}"
+      - "PassNTLMv2 {{ password_hash }}"
+      - "NoProxy localhost, 127.0.0.*, 10.*, 192.168.*"
+      - "Gateway yes"
+      - "Proxy proxy.net:8080"
+
+- name: Add http_proxy and https_proxy to the sudoers env_keep
+  become: true
+  lineinfile:
+      path: /etc/sudoers.d/env_proxy
+      create: true
+      mode: 0440
+      line: "Defaults env_keep += \"{{ required_environment_vars | map(attribute='name') | join(' ') }}\""
+
+- name: Restart cntlm
+  become: true
+  systemd:
+      name: cntlm
+      state: restarted
+
+- name: Create docker systemd override folder
+  become: true
+  file:
+      name: /etc/systemd/system/docker.service.d
+      state: directory
+
+- name: Create root's .docker folder
+  become: true
+  file:
+      name: /root/.docker
+      state: directory
+
+- name: Configure Docker to use the proxy
+  become: true
+  template:
+      src: docker-http_proxy.conf.j2
+      dest: /etc/systemd/system/docker.service.d/http-proxy.conf
+  notify:
+      - restart docker
+
+- name: Configure Docker client to launch images that use the proxy
+  become: true
+  template:
+      src: docker-client-http_proxy.json.j2
+      dest: /root/.docker/config.json
+
+- name: Add firewall rule so that Docker can access this parent host
+  become: true
+  firewalld:
+      permanent: true
+      immediate: true
+      interface: docker0
+      state: enabled
+      zone: trusted

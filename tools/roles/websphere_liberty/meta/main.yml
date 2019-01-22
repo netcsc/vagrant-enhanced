@@ -1,0 +1,5 @@
+---
+
+dependencies:
+    # Even if teardown is defined as true we need ibm_java installed to run our stuff
+    - { role: ibm_java, teardown: false }

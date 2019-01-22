@@ -1,0 +1,12 @@
+---
+
+- name: "{{ 'Disable' if teardown else 'Enable' }} repositories"
+  become: true
+  ini_file:
+      path: "/etc/yum.repos.d/{{ item.0.file }}.repo"
+      section: "{{ item.1 }}"
+      option: enabled
+      value: "{{ 0 if teardown else 1 }}"
+  with_subelements:
+      - "{{ repos }}"
+      - repos

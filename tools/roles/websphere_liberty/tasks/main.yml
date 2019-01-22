@@ -1,0 +1,9 @@
+---
+
+# Websphere doesn't "re-install".  It errors out when the path already exists.
+- name: Check for websphere install folder
+  stat:
+      path: /opt/IBM/WASLiberty
+  register: was_liberty_path
+
+- include_tasks: "{{ 'teardown.yml' if teardown else 'install.yml' }}"

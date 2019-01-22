@@ -1,0 +1,26 @@
+---
+
+# Renaming to .pem for the destination filename.
+# This is because some tools think .cer means a different kind of certificate,
+# however .pem is known to be a base64-encoded cert.
+- name: Install Entrust certificates
+  become: true
+  get_url:
+      url: "{{ item.url }}"
+      dest: /etc/pki/ca-trust/source/anchors/{{ item.dest }}
+  with_items:
+      - url: https://www.entrust.com/root-certificates/entrust_l1k.cer
+        dest: entrust_l1k.pem
+      - url: https://www.entrust.com/root-certificates/entrust_g2_ca.cer
+        dest: entrust_g2_ca.pem
+  register: entrust_certs
+
+- name: Enable CA trust
+  become: true
+  command: update-ca-trust enable
+  when: entrust_certs.changed
+
+- name: Update System certificate stores
+  become: true
+  command: update-ca-trust
+  when: entrust_certs.changed

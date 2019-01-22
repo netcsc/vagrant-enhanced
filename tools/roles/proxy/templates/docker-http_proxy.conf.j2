@@ -1,0 +1,4 @@
+[Service]
+{% for env_var in required_environment_vars %}
+Environment="{{ env_var.name | upper }}={{ env_var.value }}"
+{% endfor %}

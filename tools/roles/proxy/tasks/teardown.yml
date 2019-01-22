@@ -1,0 +1,54 @@
+---
+- name: Stop cntlm
+  become: true
+  systemd:
+      name: cntlm
+      state: stopped
+
+- name: Ensure proxy settings are not in the user's .bashrc
+  lineinfile:
+      path: ~/.bashrc
+      line: "export {{ item.name }}=\"{{ item.value }}\""
+      state: absent
+  with_items: "{{ required_environment_vars }}"
+
+- name: Unmount cntlm tmpfs
+  become: true
+  mount:
+      state: unmounted
+      path: /mnt/cntlm
+
+- name: Remove /mnt/cntlm
+  become: true
+  file:
+      state: absent
+      path: /mnt/cntlm
+
+- name: Get status of /etc/cntlm.conf
+  stat:
+      path: /etc/cntlm.conf
+  register: cntlm_conf
+
+- name: Remove /etc/cntlm.conf symlink
+  become: true
+  file:
+      state: absent
+      path: /etc/cntlm.conf
+  when: cntlm_conf.stat.islnk is defined and cntlm_conf.stat.islnk
+
+- name: Copy real /etc/cntlm.conf from the backup file
+  become: true
+  copy:
+      src: /etc/cntlm.orig.conf
+      dest: /etc/cntlm.conf
+      remote_src: true
+
+- name: Remove http_proxy and https_proxy from the sudoers env_keep
+  become: true
+  lineinfile:
+      path: /etc/sudoers.d/env_proxy
+      create: true
+      mode: 0440
+      line: "Defaults env_keep += \"{{ required_environment_vars | map(attribute='name') | join(' ') }}\""
+      state: absent
+

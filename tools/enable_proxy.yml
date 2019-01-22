@@ -1,0 +1,21 @@
+---
+
+- hosts: localhost
+  vars_prompt:
+      - name: username
+        prompt: "Please enter your Proxy username (e.g. TLaws01)"
+        private: false
+      - name: domain
+        prompt: "Please enter your Proxy domain"
+        default: ""
+        private: false
+      - name: password_clear
+        prompt: "Please enter your Proxy password"
+        private: true
+  environment:
+      http_proxy: "http://localhost:3128/"
+      https_proxy: "http://localhost:3128/"
+  roles:
+      - { role: proxy, tags: [ proxy ] }
+      - { role: entrust_certs, tags: [ certs ] }
+      - { role: vagrant_yum, tags: [ yum ] }

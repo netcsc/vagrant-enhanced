@@ -1,0 +1,28 @@
+- set_fact:
+      uninstall_jvm: "{{ jvm_installed.stat.exists }}"
+
+- block:
+    - name: Remove IBM JVM {{ ibm_jvm_major_version }}.{{ ibm_jvm_minor_version }} installer
+      file:
+          path: /tmp/ibm_jvm_{{ ibm_jvm_major_version }}.{{ ibm_jvm_minor_version }}.bin
+          state: absent
+
+    - name: Remove the reponse file
+      file:
+          path: /tmp/installer.properties
+          state: absent
+
+    - name: Uninstall the JVM
+      become: true
+      command: /opt/ibm/java-x86_64/_uninstall/uninstall
+
+    - name: Update alternatives so IBM Java is removed
+      become: true
+      command: update-alternatives --remove java "{{ ibm_jvm_install_dir }}/bin/java"
+  when: uninstall_jvm
+
+- name: Remove old JVM directory
+  become: true
+  file:
+      path: /opt/ibm/java-x86_64
+      state: absent

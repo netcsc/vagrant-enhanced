@@ -1,0 +1,21 @@
+---
+
+- name: Download websphere JARs
+  get_url:
+      url: https://path-to-websphere-liberty/{{ item }}
+      dest: /tmp/{{ item }}
+  with_items:
+      - wlp-developers-runtime-{{ websphere_version }}.jar
+      - wlp-developers-extended-{{ websphere_version }}.jar
+  when: not was_liberty_path.stat.exists
+
+- name: Install websphere
+  become: true
+  command: >
+      java -jar {{ item }} --acceptLicense /opt/IBM/WASLiberty
+  with_items:
+      - /tmp/wlp-developers-runtime-{{ websphere_version }}.jar
+      - /tmp/wlp-developers-extended-{{ websphere_version }}.jar
+  when: not was_liberty_path.stat.exists
+
+

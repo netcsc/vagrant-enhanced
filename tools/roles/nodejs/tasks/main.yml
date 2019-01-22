@@ -1,0 +1,19 @@
+---
+
+- name: Install node and npm from the centos repo
+  yum:
+      # nodejs is a dependency of npm.  No real point in specifying both.
+      name: npm
+
+- name: Upgrade "npm" to the latest version.
+  npm:
+      name: npm
+      global: true
+
+- name: Install the "n" tool for nodejs
+  npm:
+      name: n
+      global: true
+
+- name: Update nodejs to {{ nodejs_version }}
+  command: n {{ nodejs_version }}

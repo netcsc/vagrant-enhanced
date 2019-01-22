@@ -1,0 +1,9 @@
+{
+    "proxies": {
+        "default": {
+            {% for env_var in docker_environment_vars %}
+            "{{ env_var.name }}": "{{ env_var.value }}"{{ "," if not loop.last else "" }}
+            {% endfor %}
+        }
+    }
+}

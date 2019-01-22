@@ -1,0 +1,13 @@
+---
+
+teardown: false
+
+repos:
+  - file: CentOS-Base
+    repos:
+        - base
+        - updates
+        - extras
+  - file: epel
+    repos:
+        - epel

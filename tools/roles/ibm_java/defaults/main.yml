@@ -1,0 +1,7 @@
+---
+
+teardown: false
+
+ibm_jvm_major_version: 7.0
+ibm_jvm_minor_version: 10.5
+ibm_jvm_install_dir: /opt/ibm/java-x86_64

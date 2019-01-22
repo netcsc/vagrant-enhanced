@@ -1,0 +1,9 @@
+---
+
+- hosts: localhost
+  vars:
+      teardown: true
+  roles:
+      - { role: proxy, tags: [ proxy ] }
+      - { role: entrust_certs, tags: [ certs ] }
+      - { role: vagrant_yum, tags: [ yum ] }

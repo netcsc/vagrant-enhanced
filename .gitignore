@@ -1,0 +1,6 @@
+.vagrant/
+plugins_bak/
+plugins
+.idea
+.DS_Store
+.patch-vagrant-1.9.4/

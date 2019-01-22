@@ -1,0 +1,5 @@
+---
+
+# "lts" is the "long-term support" version.
+# Essentially it's the latest, most stable version. 
+nodejs_version: lts

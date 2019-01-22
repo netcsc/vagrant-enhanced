@@ -1,0 +1,25 @@
+---
+
+- name: List all WASLiberty servers
+  become: true
+  shell: /opt/IBM/WASLiberty/wlp/bin/server list | tail -n +3
+  register: liberty_servers
+
+- name: Stop running WASLiberty servers
+  become: true
+  command: "/opt/IBM/WASLiberty/wlp/bin/server stop {{ item }}"
+  with_items: "{{ liberty_servers.stdout_lines }}"
+
+- name: Uninstall WASLiberty
+  become: true
+  file:
+      path: /opt/IBM/WASLiberty
+      state: absent
+
+- name: Remove websphere JARs
+  file:
+      path: /tmp/{{ item }}
+      state: absent
+  with_items:
+      - wlp-developers-runtime-{{ websphere_version }}.jar
+      - wlp-developers-extended-{{ websphere_version }}.jar
